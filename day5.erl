@@ -74,21 +74,25 @@ op_equals(Id, [A1, A2, {_, S1} | _], Program) ->
     end,
   {Id+4, maps:update(S, Store, Program)}.
 
-
-
 run_code_acc({Id, Program}, Input, Output) -> 
   { Op, Modes } = get_opcode(maps:get(Id, Program)),
   [{_, Si} | _] = Args = lists:zip(Modes, lists:map(fun (X) -> X + Id end, [1,2,3])),
-  case Op of
-    99 -> {Program, lists:reverse(Output) } ;
-     1 -> run_code_acc(op_add(Id, Args, Program), Input, Output) ;
-     2 -> run_code_acc(op_multiply(Id, Args, Program), Input, Output) ;
-     3 -> run_code_acc(op_store(Id, Input, Args, Program), Input, Output) ;
-     4 -> run_code_acc({Id+2, Program}, Input, [maps:get(maps:get(Si, Program), Program) | Output]) ;
-     5 -> run_code_acc(op_jump_true(Id, Args, Program), Input, Output) ;
-     6 -> run_code_acc(op_jump_false(Id, Args, Program), Input, Output) ;
-     7 -> run_code_acc(op_less_than(Id, Args, Program), Input, Output) ;
-     8 -> run_code_acc(op_equals(Id, Args, Program), Input, Output) 
+  Result = case Op of
+    99 -> ok ;
+     1 -> op_add(Id, Args, Program) ;
+     2 -> op_multiply(Id, Args, Program) ;
+     3 -> op_store(Id, Input, Args, Program) ;
+     4 -> {output, Id+2, [maps:get(maps:get(Si, Program), Program) | Output]} ;
+     5 -> op_jump_true(Id, Args, Program) ;
+     6 -> op_jump_false(Id, Args, Program) ;
+     7 -> op_less_than(Id, Args, Program) ;
+     8 -> op_equals(Id, Args, Program) 
+  end,
+
+  case Result of
+    ok                      -> {Program, Output} ;
+    {output, New_id, New_o} -> run_code_acc({New_id, Program}, Input, New_o) ;
+    _                       -> run_code_acc(Result, Input, Output) 
   end.
 
 part1() ->
